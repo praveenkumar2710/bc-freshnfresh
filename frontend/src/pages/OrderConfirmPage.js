@@ -71,7 +71,21 @@ export default function OrderConfirmPage() {
         <div style={{ background:'#f0fff8', border:'1.5px solid #b2dfcc', borderRadius:12, padding:'14px 18px', marginTop:20, fontSize:13, color:'#1a5c30', textAlign:'center' }}>
           🌸 We'll call you before delivery to confirm timing.<br />
           <strong>Questions?</strong> WhatsApp us on the number provided at checkout.
+          
         </div>
+        {/* Order again banner */}
+<div style={{
+  background: '#1a5c30', color: '#fff', borderRadius: 12,
+  padding: '18px 20px', marginTop: 16, textAlign: 'center'
+}}>
+  <div style={{ fontSize: 20, marginBottom: 6 }}>🌸 Thank you, {order.customerName}!</div>
+  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#c8e6c9' }}>
+    Loved your flowers? Order again anytime — same-day delivery within 12 km.
+  </p>
+  <Link to="/" className="btn btn-warm" style={{ display: 'inline-block' }}>
+    🛒 Order Again
+  </Link>
+</div>
       </div>
     </div>
   );

@@ -282,11 +282,26 @@ export default function HomePage() {
         </div>
       </div>
 
+
       {!isAdmin && cartCount > 0 && (
         <Link to="/cart" className="fab-cart">
           🛒 View Cart ({cartCount})
         </Link>
       )}
+      {/* Welcome banner for logged-in customers */}
+{isLoggedIn && !isAdmin && (
+  <div style={{
+    background: 'linear-gradient(135deg, #1a5c30, #2e7d32)',
+    color: '#fff', padding: '12px 20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    flexWrap: 'wrap', gap: 8, fontSize: 14
+  }}>
+    <span>👋 Welcome back, <strong>{user?.name || user?.email}</strong>! Ready to order fresh flowers?</span>
+    <Link to="/cart" className="btn btn-secondary btn-sm" style={{ color: '#1a5c30' }}>
+      View Cart →
+    </Link>
+  </div>
+)}
     </div>
   );
 }
