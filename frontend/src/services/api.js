@@ -5,13 +5,13 @@ const BASE = '/api';
 // ✅ FIX: Use this to prefix image URLs from backend
 // e.g. product.imageUrl = '/uploads/products/xxx.jpg'
 // → full URL = 'http://localhost:8080/uploads/products/xxx.jpg'
-export const BACKEND_URL = 'http://localhost:8080';
+export const API_BASE_URL = "https://bc-freshnfresh.onrender.com";
 
 // Helper to get the full image URL from a relative path
 export function getImageUrl(imageUrl) {
   if (!imageUrl) return null;
   if (imageUrl.startsWith('http')) return imageUrl;   // already absolute
-  return `${BACKEND_URL}${imageUrl}`;                 // prefix backend origin
+  return `${API_BASE_URL}${imageUrl}`;                 // prefix backend origin
 }
 
 // Attach JWT token to every request if present
