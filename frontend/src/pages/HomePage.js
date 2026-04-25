@@ -70,16 +70,26 @@ export default function HomePage() {
   const isLoggedIn = !!localStorage.getItem("token");
 
   const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api.getProducts();
+  setLoading(true);
+  try {
+    const data = await api.getProducts();
+
+    if (Array.isArray(data)) {
       setProducts(data);
-    } catch {
-      console.error("API error");
-    } finally {
-      setLoading(false);
+    } else if (Array.isArray(data.content)) {
+      setProducts(data.content);
+    } else {
+      console.error("Unexpected API response:", data);
+      setProducts([]);
     }
-  }, []);
+
+  } catch (err) {
+    console.error(err);
+    setProducts([]);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     load();
