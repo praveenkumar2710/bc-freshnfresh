@@ -2,7 +2,6 @@ package com.flowershop.config;
 
 import com.flowershop.security.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,28 +27,38 @@ public class SecurityConfig {
     @Autowired
     private JwtFilter jwtFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
-    private String allowedOrigins;
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
-            .cors(c -> c.configurationSource(corsSource()))
-            .csrf(c -> c.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(e -> e
-                // Return 401 JSON — never redirect to /login page
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            // ✅ CORS
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            // ✅ Disable CSRF (API project)
+            .csrf(csrf -> csrf.disable())
+
+            // ✅ Stateless (JWT)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+
+            // ✅ Return 401 instead of redirect
+            .exceptionHandling(e ->
+                e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            )
+
+            // ❗ Disable default login forms
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
+
+            // ✅ Authorization rules
             .authorizeHttpRequests(auth -> auth
 
-                // ── Spring's own error endpoint — MUST be public ────
+                // Error + preflight
                 .requestMatchers("/error").permitAll()
-
-                // ── CORS preflight ──────────────────────────────────
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ── Public endpoints ────────────────────────────────
+                // Public APIs
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/products/**",
@@ -58,36 +67,50 @@ public class SecurityConfig {
                     "/uploads/**"
                 ).permitAll()
 
-                // ── Admin only ──────────────────────────────────────
-                // NOTE: hasRole("ADMIN") automatically checks for "ROLE_ADMIN"
-                // JwtFilter sets authority as "ROLE_ADMIN" so this matches correctly
+                // Admin
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                // ── Authenticated users (customer OR admin) ─────────
+                // Logged-in users
                 .requestMatchers("/api/orders/**").hasAnyRole("CUSTOMER", "ADMIN")
                 .requestMatchers("/api/payment/**").hasAnyRole("CUSTOMER", "ADMIN")
                 .requestMatchers("/api/user/**").hasAnyRole("CUSTOMER", "ADMIN")
 
                 .anyRequest().authenticated()
             )
+
+            // ✅ JWT filter
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    // ✅ Password encoder
     @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
+    // ✅ FINAL CORS CONFIG (FIXES YOUR ISSUE)
     @Bean
-    public CorsConfigurationSource corsSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(allowedOrigins.split(",")));
-        cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        cfg.setAllowedHeaders(List.of("*"));
-        cfg.setExposedHeaders(List.of("Authorization"));
-        cfg.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
-        src.registerCorsConfiguration("/**", cfg);
-        return src;
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            "https://bucolic-kitten-6d2114.netlify.app"
+        ));
+
+        config.setAllowedMethods(List.of(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        return source;
     }
 }
