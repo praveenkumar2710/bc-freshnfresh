@@ -1,82 +1,182 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { api, getImageUrl } from '../services/api';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import './HomePage.css';
 
-import Navbar   from './components/Navbar';
-import Footer   from './components/Footer';
-import HomePage from './pages/HomePage';
-import CartPage from './pages/CartPage';
-import CheckoutPage     from './pages/CheckoutPage';
-import OrderConfirmPage from './pages/OrderConfirmPage';
-import TrackOrderPage   from './pages/TrackOrderPage';
-import MyOrdersPage     from './pages/MyOrdersPage';
-import LoginPage        from './pages/LoginPage';
-import RegisterPage     from './pages/RegisterPage';
+const CATEGORIES = [
+  { name: 'All',              emoji: '🌸' },
+  { name: 'Bouquets',         emoji: '💐' },
+  { name: 'Garlands',         emoji: '🌼' },
+  { name: 'Pooja Flowers',    emoji: '🪷' },
+  { name: 'Sacred Leaves',    emoji: '🍃' },
+  { name: 'Pooja Essentials', emoji: '🥥' },
+  { name: 'Loose Flowers',    emoji: '🌺' },
+];
 
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminProducts  from './pages/admin/AdminProducts';
-import AdminOrders    from './pages/admin/AdminOrders';
+/* ── Product Image ── */
+function ProductImage({ product }) {
+  const [imgErr, setImgErr] = useState(false);
+  const src = getImageUrl(product.imageUrl);
 
-// Admin-only route guard
-function AdminRoute({ children }) {
-  const { isLoggedIn, isAdmin } = useAuth();
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  if (!isAdmin)    return <Navigate to="/" />;
-  return children;
+  if (src && !imgErr) {
+    return (
+      <img
+        src={src}
+        alt={product.name}
+        className="pcard-img"
+        onError={() => setImgErr(true)}
+      />
+    );
+  }
+  return <div className="pcard-emoji">{product.imageEmoji || '🌸'}</div>;
 }
 
-// Customer-only route guard (admin is redirected to admin panel)
-function CustomerRoute({ children }) {
-  const { isLoggedIn, isAdmin } = useAuth();
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  if (isAdmin)     return <Navigate to="/admin" />;
-  return children;
-}
+/* ── Product Card ── */
+function ProductCard({ product }) {
+  const { addToCart, cartItems } = useCart();
+  const { isAdmin } = useAuth();
+  const inCart = cartItems?.find(i => i.id === product.id);
 
-// Private route (logged in, any role)
-function PrivateRoute({ children }) {
-  const { isLoggedIn } = useAuth();
-  return isLoggedIn ? children : <Navigate to="/login" />;
-}
-
-function CustomerLayout({ children }) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh' }}>
-      <Navbar />
-      <main style={{ flex:1 }}>{children}</main>
-      <Footer />
+    <div className="pcard">
+      <div className="pcard-img-wrap">
+        <ProductImage product={product} />
+        {!product.available && (
+          <div className="pcard-sold-out">Sold Out</div>
+        )}
+      </div>
+      <div className="pcard-body">
+        <div className="pcard-category">{product.category || 'Flowers'}</div>
+        <h3 className="pcard-name">{product.name}</h3>
+        <div className="pcard-footer">
+          <span className="pcard-price">
+            ₹{product.price}
+            <span className="pcard-unit"> / {product.unit || 'piece'}</span>
+          </span>
+          {isAdmin ? (
+            <Link to="/admin/products" className="pcard-btn pcard-btn-manage">Manage</Link>
+          ) : product.available ? (
+            <button
+              className={`pcard-btn ${inCart ? 'pcard-btn-added' : 'pcard-btn-add'}`}
+              onClick={() => addToCart(product, 1)}
+            >
+              {inCart ? `✓ ${inCart.quantity}` : '+ Add'}
+            </button>
+          ) : (
+            <span className="pcard-btn pcard-btn-disabled">Unavailable</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-export default function App() {
+/* ── Main Page ── */
+export default function HomePage() {
+  const [products, setProducts] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [category, setCategory] = useState('All');
+  const [search,   setSearch]   = useState('');
+
+  const { cartCount } = useCart();
+  const { isAdmin }   = useAuth();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.getProducts();
+      if (Array.isArray(data))               setProducts(data);
+      else if (Array.isArray(data?.content)) setProducts(data.content);
+      else                                   setProducts([]);
+    } catch (err) {
+      console.error(err);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const visible = products.filter(p => {
+    const matchCat    = category === 'All' || p.category === category;
+    const q           = search.trim().toLowerCase();
+    const matchSearch = !q || p.name?.toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
   return (
-    <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public pages */}
-            <Route path="/"            element={<CustomerLayout><HomePage /></CustomerLayout>} />
-            <Route path="/order/track" element={<CustomerLayout><TrackOrderPage /></CustomerLayout>} />
-            <Route path="/login"       element={<CustomerLayout><LoginPage /></CustomerLayout>} />
-            <Route path="/register"    element={<CustomerLayout><RegisterPage /></CustomerLayout>} />
+    <div className="hp-root">
 
-            {/* Customer-only pages (admin redirected away) */}
-            <Route path="/cart"     element={<CustomerLayout><CustomerRoute><CartPage /></CustomerRoute></CustomerLayout>} />
-            <Route path="/checkout" element={<CustomerLayout><CustomerRoute><CheckoutPage /></CustomerRoute></CustomerLayout>} />
-            <Route path="/my-orders" element={<CustomerLayout><CustomerRoute><MyOrdersPage /></CustomerRoute></CustomerLayout>} />
-            <Route path="/order/confirmation/:id" element={<CustomerLayout><PrivateRoute><OrderConfirmPage /></PrivateRoute></CustomerLayout>} />
+      {/* Admin banner */}
+      {isAdmin && (
+        <div className="hp-admin-bar">
+          🔑 Admin Mode — <Link to="/admin">Go to Dashboard →</Link>
+        </div>
+      )}
 
-            {/* Admin-only pages */}
-            <Route path="/admin"          element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
-            <Route path="/admin/orders"   element={<AdminRoute><AdminOrders /></AdminRoute>} />
+      {/* Hero */}
+      <div className="hp-hero">
+        <div className="hp-hero-text">
+          <h1>Fresh Flowers,<br />Delivered Daily 🌸</h1>
+          <p>Premium pooja flowers &amp; bouquets delivered to your door</p>
+        </div>
+      </div>
 
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
-    </AuthProvider>
+      {/* Search */}
+      <div className="hp-search-wrap">
+        <input
+          className="hp-search"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Search flowers, garlands, essentials…"
+        />
+      </div>
+
+      {/* Category tabs */}
+      <div className="hp-cats">
+        {CATEGORIES.map(c => (
+          <button
+            key={c.name}
+            className={`hp-cat-btn ${category === c.name ? 'active' : ''}`}
+            onClick={() => setCategory(c.name)}
+          >
+            {c.emoji} {c.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Products grid */}
+      <div className="hp-main">
+        {loading ? (
+          <div className="hp-loading">
+            <div className="hp-spinner" />
+            <span>Loading fresh flowers…</span>
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="hp-empty">
+            <div style={{ fontSize: 48 }}>🌾</div>
+            <p>{search ? `No results for "${search}"` : 'No products in this category yet.'}</p>
+            {search && (
+              <button className="hp-btn hp-btn-primary" onClick={() => setSearch('')}>Clear Search</button>
+            )}
+          </div>
+        ) : (
+          <div className="hp-grid">
+            {visible.map(p => <ProductCard key={p.id} product={p} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Floating cart button (mobile) */}
+      {!isAdmin && cartCount > 0 && (
+        <Link to="/cart" className="hp-float-cart">
+          🛒 View Cart &nbsp;<strong>({cartCount})</strong>
+        </Link>
+      )}
+
+    </div>
   );
 }

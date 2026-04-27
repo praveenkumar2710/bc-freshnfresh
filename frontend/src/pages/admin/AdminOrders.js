@@ -32,8 +32,9 @@ function StatusTimeline({ status }) {
   const currIndex = steps.indexOf(status);
 
   if (status === 'CANCELLED') return (
-    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 0',
-      fontSize:13, color:'#e63946', background:'#fdecea', borderRadius:8, padding:'10px 14px', marginBottom:14 }}>
+    <div style={{ display:'flex', alignItems:'center', gap:8,
+      fontSize:13, color:'#e63946', background:'#fdecea',
+      borderRadius:8, padding:'10px 14px', marginBottom:14 }}>
       ❌ Order was cancelled
     </div>
   );
@@ -58,8 +59,9 @@ function StatusTimeline({ status }) {
               }}>
                 {done ? '✓' : meta.icon}
               </div>
-              <span style={{ fontSize:10, marginTop:4, fontWeight: active ? 700 : 500, textAlign:'center',
-                color: active ? 'var(--green-main)' : done ? '#27ae60' : '#aaa', lineHeight:1.2 }}>
+              <span style={{ fontSize:10, marginTop:4, fontWeight: active ? 700 : 500,
+                textAlign:'center', lineHeight:1.2,
+                color: active ? 'var(--green-main)' : done ? '#27ae60' : '#aaa' }}>
                 {meta.label}
               </span>
             </div>
@@ -76,35 +78,29 @@ function StatusTimeline({ status }) {
 }
 
 export default function AdminOrders() {
-  // All orders from backend
-  const [allOrders,  setAllOrders]  = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState(null);
-
-  // Filter + search applied client-side (no re-fetch needed)
-  const [filter,     setFilter]     = useState('ALL');
-  const [search,     setSearch]     = useState('');
-
-  // Order detail modal
-  const [detail,     setDetail]     = useState(null);
-  const [notes,      setNotes]      = useState('');
-  const [updating,   setUpdating]   = useState(false);
+  const [allOrders, setAllOrders] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState(null);
+  const [filter,    setFilter]    = useState('ALL');
+  const [search,    setSearch]    = useState('');
+  const [detail,    setDetail]    = useState(null);
+  const [notes,     setNotes]     = useState('');
+  const [updating,  setUpdating]  = useState(false);
 
   const timerRef = useRef(null);
 
-  /* ── Fetch all orders from backend ─────────────────── */
+  /* ── Fetch all orders ───────────────────────────────── */
   const fetchOrders = async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
       const data = await adminApi.getOrders();
       const list = Array.isArray(data) ? data : [];
-      // Sort newest first
       list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setAllOrders(list);
     } catch (err) {
       const status = err?.response?.status;
-      if (status === 401) setError('Session expired — please log out and log back in.');
+      if (status === 401)      setError('Session expired — please log out and log back in.');
       else if (status === 403) setError('Access denied — your account needs ADMIN role.');
       else if (status === 404) setError('Orders endpoint not found — is the backend running on port 8080?');
       else setError(err?.response?.data?.error || err?.message || 'Could not load orders. Is the backend running?');
@@ -113,15 +109,13 @@ export default function AdminOrders() {
     }
   };
 
-  // Load on mount
   useEffect(() => {
     fetchOrders();
-    // Auto-refresh every 30 seconds silently
     timerRef.current = setInterval(() => fetchOrders(true), 30000);
     return () => clearInterval(timerRef.current);
-  }, []); // ← intentionally empty — fetchOrders never changes
+  }, []);
 
-  /* ── Client-side filter + search (no re-fetch) ──────── */
+  /* ── Client-side filter + search ───────────────────── */
   const filtered = allOrders.filter(o => {
     const matchStatus = filter === 'ALL' || o.status === filter;
     const q = search.trim().toLowerCase();
@@ -140,7 +134,6 @@ export default function AdminOrders() {
     try {
       const updated = await adminApi.updateStatus(order.id, next, notes);
       setDetail(updated);
-      // Refresh list silently so UI stays open
       fetchOrders(true);
     } catch (err) {
       alert('Status update failed: ' + (err?.response?.data?.error || err?.message || 'Unknown error'));
@@ -161,25 +154,39 @@ export default function AdminOrders() {
     setUpdating(false);
   };
 
+  /* ── ✅ FIXED openDetail: tries API first, falls back to local data ── */
   const openDetail = async (id) => {
+    // First try to find it locally (instant, no network call)
+    const local = allOrders.find(o => o.id === id);
+    if (local) {
+      setDetail(local);
+      setNotes(local.adminNotes || '');
+    }
+    // Then fetch fresh data from API in background
     try {
-      const o = await adminApi.getOrder(id);
-      if (o) { setDetail(o); setNotes(o.adminNotes || ''); }
+      const fresh = await adminApi.getOrder(id);
+      if (fresh) {
+        setDetail(fresh);
+        setNotes(fresh.adminNotes || '');
+      }
     } catch (err) {
-      alert('Could not load order: ' + (err?.response?.data?.error || err?.message || ''));
+      // If local data was already set, silently ignore the error
+      if (!local) {
+        alert('Could not load order: ' + (err?.response?.data?.error || err?.message || ''));
+      }
     }
   };
 
-  /* ── Delivery stats ─────────────────────────────────── */
-  const countFor    = s => s === 'ALL' ? allOrders.length : allOrders.filter(o => o.status === s).length;
-  const pending     = allOrders.filter(o => o.status === 'PENDING').length;
-  const outForDel   = allOrders.filter(o => o.status === 'OUT_FOR_DELIVERY').length;
-  const todayDel    = allOrders.filter(o => {
+  /* ── Stats ──────────────────────────────────────────── */
+  const countFor  = s => s === 'ALL' ? allOrders.length : allOrders.filter(o => o.status === s).length;
+  const pending   = allOrders.filter(o => o.status === 'PENDING').length;
+  const outForDel = allOrders.filter(o => o.status === 'OUT_FOR_DELIVERY').length;
+  const todayDel  = allOrders.filter(o => {
     if (o.status !== 'DELIVERED') return false;
     const d = new Date(o.createdAt), now = new Date();
     return d.toDateString() === now.toDateString();
   }).length;
-  const totalDel    = allOrders.filter(o => o.status === 'DELIVERED').length;
+  const totalDel  = allOrders.filter(o => o.status === 'DELIVERED').length;
 
   const statusColor = s => STATUS_META[s]?.color || 'badge-gray';
 
@@ -195,7 +202,11 @@ export default function AdminOrders() {
         </nav>
         <div style={{ padding:'0 12px 16px' }}>
           <button className="sb-logout"
-            onClick={() => { localStorage.removeItem('fs_token'); localStorage.removeItem('fs_user'); window.location.href='/login'; }}>
+            onClick={() => {
+              localStorage.removeItem('fs_token');
+              localStorage.removeItem('fs_user');
+              window.location.href = '/login';
+            }}>
             🚪 Logout
           </button>
         </div>
@@ -216,7 +227,7 @@ export default function AdminOrders() {
           </div>
         </div>
 
-        {/* Delivery monitoring stats */}
+        {/* Stats */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, padding:'16px 28px 0' }}>
           {[
             { label:'Pending',          val:pending,  color:'#f9c74f', icon:'⏳' },
@@ -240,8 +251,7 @@ export default function AdminOrders() {
             onChange={e => setSearch(e.target.value)}
             placeholder="🔍 Search by order number, customer name or phone…"
             style={{ width:'100%', padding:'10px 14px', borderRadius:8,
-              border:'1.5px solid #e0e8e0', fontSize:14, outline:'none',
-              boxSizing:'border-box' }}
+              border:'1.5px solid #e0e8e0', fontSize:14, outline:'none', boxSizing:'border-box' }}
           />
         </div>
 
@@ -299,8 +309,7 @@ export default function AdminOrders() {
               </thead>
               <tbody>
                 {filtered.map(o => (
-                  <tr key={o.id}
-                    style={{ background: o.status==='PENDING' ? '#fffdf0' : '' }}>
+                  <tr key={o.id} style={{ background: o.status==='PENDING' ? '#fffdf0' : '' }}>
                     <td style={{ fontWeight:600, fontSize:13 }}>{o.orderNumber}</td>
                     <td>
                       <div style={{ fontWeight:500 }}>{o.user?.name}</div>
@@ -327,8 +336,7 @@ export default function AdminOrders() {
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-primary btn-sm"
-                        onClick={() => openDetail(o.id)}>
+                      <button className="btn btn-primary btn-sm" onClick={() => openDetail(o.id)}>
                         Manage →
                       </button>
                     </td>
@@ -344,7 +352,6 @@ export default function AdminOrders() {
       {detail && (
         <div className="modal-backdrop" onClick={() => setDetail(null)}>
           <div className="modal-box" style={{ maxWidth:600 }} onClick={e => e.stopPropagation()}>
-            {/* Header */}
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
               <h2 style={{ fontSize:18 }}>{detail.orderNumber}</h2>
               <button onClick={() => setDetail(null)}
@@ -353,10 +360,8 @@ export default function AdminOrders() {
               </button>
             </div>
 
-            {/* Status timeline */}
             <StatusTimeline status={detail.status} />
 
-            {/* Customer info */}
             <div style={{ background:'var(--green-pale)', borderRadius:'var(--radius)',
               padding:'12px 16px', marginBottom:14 }}>
               <div style={{ fontWeight:600, fontSize:15 }}>{detail.user?.name}</div>
@@ -370,7 +375,6 @@ export default function AdminOrders() {
               </div>
             </div>
 
-            {/* Items */}
             <div style={{ marginBottom:12 }}>
               <div style={{ fontWeight:600, fontSize:12, color:'var(--text-light)', marginBottom:6, letterSpacing:.5 }}>
                 ORDER ITEMS
@@ -384,7 +388,6 @@ export default function AdminOrders() {
               ))}
             </div>
 
-            {/* Bill */}
             <div style={{ background:'#f9fdf9', borderRadius:8, padding:'12px 14px', marginBottom:14 }}>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, marginBottom:4 }}>
                 <span>Subtotal</span><span>₹{detail.subtotal}</span>
@@ -399,7 +402,6 @@ export default function AdminOrders() {
               </div>
             </div>
 
-            {/* Success/cancel banners */}
             {detail.status === 'DELIVERED' && (
               <div style={{ background:'#e9f7ef', border:'1.5px solid #27ae60', borderRadius:8,
                 padding:'10px 14px', marginBottom:14, fontSize:14, color:'#1a5c30', fontWeight:600 }}>
@@ -415,7 +417,6 @@ export default function AdminOrders() {
               </div>
             )}
 
-            {/* Admin notes */}
             {detail.status !== 'DELIVERED' && detail.status !== 'CANCELLED' && (
               <div className="form-group" style={{ marginBottom:14 }}>
                 <label>Admin Notes <span style={{ fontWeight:400, color:'var(--text-light)' }}>(optional)</span></label>
@@ -425,7 +426,6 @@ export default function AdminOrders() {
               </div>
             )}
 
-            {/* Action buttons */}
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {NEXT_STATUS[detail.status] && (
                 <button className="btn btn-primary" style={{ flex:1 }}

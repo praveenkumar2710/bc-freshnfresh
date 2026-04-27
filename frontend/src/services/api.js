@@ -24,7 +24,6 @@ apiClient.interceptors.response.use(
   err => {
     if (err?.response?.status === 401) {
       const url = err?.config?.url || '';
-
       if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
         localStorage.removeItem('fs_token');
         localStorage.removeItem('fs_user');
@@ -121,6 +120,10 @@ export const adminApi = {
 
   getOrders: () =>
     apiClient.get('/admin/orders').then(r => r.data),
+
+  // ✅ FIXED: was missing, caused "getOrder is not a function" on Netlify
+  getOrder: (id) =>
+    apiClient.get(`/admin/orders/${id}`).then(r => r.data),
 
   updateStatus: (id, status, notes) =>
     apiClient.patch(`/admin/orders/${id}/status`, { status, notes }).then(r => r.data),
