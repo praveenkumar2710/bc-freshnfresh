@@ -1,11 +1,10 @@
 import axios from 'axios';
-
-const BASE = '/api';
-
-// ✅ FIX: Use this to prefix image URLs from backend
-// e.g. product.imageUrl = '/uploads/products/xxx.jpg'
-// → full URL = 'http://localhost:8080/uploads/products/xxx.jpg'
 export const API_BASE_URL = "https://bc-freshnfresh.onrender.com";
+
+// ✅ Correct axios instance
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+});
 
 // Helper to get the full image URL from a relative path
 export function getImageUrl(imageUrl) {
