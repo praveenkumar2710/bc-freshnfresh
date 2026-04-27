@@ -1,27 +1,23 @@
 import axios from 'axios';
+
 export const API_BASE_URL = "https://bc-freshnfresh.onrender.com";
 
-// ✅ Correct axios instance
-export const api = axios.create({
+// ✅ Create axios instance
+const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Helper to get the full image URL from a relative path
-export function getImageUrl(imageUrl) {
-  if (!imageUrl) return null;
-  if (imageUrl.startsWith('http')) return imageUrl;   // already absolute
-  return `${API_BASE_URL}${imageUrl}`;                 // prefix backend origin
-}
-
-// Attach JWT token to every request if present
-axios.interceptors.request.use(cfg => {
+// ✅ Attach token to every request
+apiClient.interceptors.request.use(config => {
   const token = localStorage.getItem('fs_token');
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
-  return cfg;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
-// Global response interceptor — handle 401 (token expired) gracefully
-axios.interceptors.response.use(
+// ✅ Handle 401 globally
+apiClient.interceptors.response.use(
   res => res,
   err => {
     if (err?.response?.status === 401) {
@@ -29,86 +25,100 @@ axios.interceptors.response.use(
       if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
         localStorage.removeItem('fs_token');
         localStorage.removeItem('fs_user');
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
+        window.location.href = '/login';
       }
     }
     return Promise.reject(err);
   }
 );
 
-/* ══════════════════════════════════════════════════════
-   PUBLIC API
-══════════════════════════════════════════════════════ */
+// ✅ Image helper
+export function getImageUrl(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `${API_BASE_URL}${imageUrl}`;
+}
+
+/* ================= PUBLIC API ================= */
+
 export const api = {
 
-  /* Auth */
-  register: (data)        => axios.post(`${BASE}/auth/register`, data).then(r => r.data),
-  login:    (data)        => axios.post(`${BASE}/auth/login`,    data).then(r => r.data),
-  getMe:    ()            => axios.get(`${BASE}/auth/me`).then(r => r.data),
-  updateProfile: (data)   => axios.put(`${BASE}/auth/profile`,  data).then(r => r.data),
+  // Auth
+  register: (data) => apiClient.post('/api/auth/register', data).then(r => r.data),
+  login:    (data) => apiClient.post('/api/auth/login', data).then(r => r.data),
+  getMe:    ()     => apiClient.get('/api/auth/me').then(r => r.data),
+  updateProfile: (data) => apiClient.put('/api/auth/profile', data).then(r => r.data),
 
-  /* Products */
-  getProducts:  (search)  => axios.get(`${BASE}/products`,  { params: search ? { search } : {} }).then(r => r.data),
-  getProductsByCategory: (cat) => axios.get(`${BASE}/products`, { params: { category: cat } }).then(r => r.data),
-  getCategories: ()       => axios.get(`${BASE}/products/categories`).then(r => r.data),
-  getProduct:   (id)      => axios.get(`${BASE}/products/${id}`).then(r => r.data),
+  // Products
+  getProducts: (search) =>
+    apiClient.get('/api/products', { params: search ? { search } : {} }).then(r => r.data),
 
-  /* Delivery */
+  getProductsByCategory: (cat) =>
+    apiClient.get('/api/products', { params: { category: cat } }).then(r => r.data),
+
+  getCategories: () =>
+    apiClient.get('/api/products/categories').then(r => r.data),
+
+  getProduct: (id) =>
+    apiClient.get(`/api/products/${id}`).then(r => r.data),
+
+  // Delivery
   checkDelivery: (lat, lon, subtotal = 0) =>
-    axios.get(`${BASE}/delivery/check`, { params: { lat, lon, subtotal } }).then(r => r.data),
-  getShopLocation: ()     => axios.get(`${BASE}/delivery/shop-location`).then(r => r.data),
-  getZones:        ()     => axios.get(`${BASE}/delivery/zones`).then(r => r.data),
+    apiClient.get('/api/delivery/check', { params: { lat, lon, subtotal } }).then(r => r.data),
 
-  /* Orders */
-  placeOrder:  (data)     => axios.post(`${BASE}/orders`,            data).then(r => r.data),
-  myOrders:    ()         => axios.get(`${BASE}/orders/my`).then(r => r.data),
-  getOrder:    (id)       => axios.get(`${BASE}/orders/${id}`).then(r => r.data),
-  trackOrder:  (no)       => axios.get(`${BASE}/orders/track/${no}`).then(r => r.data),
+  getShopLocation: () =>
+    apiClient.get('/api/delivery/shop-location').then(r => r.data),
 
-  /* Razorpay Payment */
+  getZones: () =>
+    apiClient.get('/api/delivery/zones').then(r => r.data),
+
+  // Orders
+  placeOrder: (data) =>
+    apiClient.post('/api/orders', data).then(r => r.data),
+
+  myOrders: () =>
+    apiClient.get('/api/orders/my').then(r => r.data),
+
+  getOrder: (id) =>
+    apiClient.get(`/api/orders/${id}`).then(r => r.data),
+
+  trackOrder: (no) =>
+    apiClient.get(`/api/orders/track/${no}`).then(r => r.data),
+
+  // Payment
   createRazorpayOrder: (orderId) =>
-    axios.post(`${BASE}/payment/create-order`, { orderId }).then(r => r.data),
+    apiClient.post('/api/payment/create-order', { orderId }).then(r => r.data),
+
   verifyPayment: (data) =>
-    axios.post(`${BASE}/payment/verify`, data).then(r => r.data),
+    apiClient.post('/api/payment/verify', data).then(r => r.data),
 };
 
-/* ══════════════════════════════════════════════════════
-   ADMIN API  (JWT with role ADMIN)
-══════════════════════════════════════════════════════ */
+/* ================= ADMIN API ================= */
+
 export const adminApi = {
 
-  getDashboard:   ()         => axios.get(`${BASE}/admin/dashboard`).then(r => r.data),
+  getDashboard: () =>
+    apiClient.get('/api/admin/dashboard').then(r => r.data),
 
-  /* Products */
-  getAllProducts:  ()         => axios.get(`${BASE}/admin/products`).then(r => r.data),
+  getAllProducts: () =>
+    apiClient.get('/api/admin/products').then(r => r.data),
 
-  // ✅ Multipart methods — send image + fields together as FormData
   addProductMultipart: (formData) =>
-    axios.post(`${BASE}/admin/products`, formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
+    apiClient.post('/api/admin/products', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(r => r.data),
 
   updateProductMultipart: (id, formData) =>
-    axios.put(`${BASE}/admin/products/${id}`, formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
+    apiClient.put(`/api/admin/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(r => r.data),
 
-  // Legacy JSON methods (kept for compatibility)
-  addProduct:      (d)        => axios.post(`${BASE}/admin/products`,         d).then(r => r.data),
-  updateProduct:   (id, d)    => axios.put(`${BASE}/admin/products/${id}`,    d).then(r => r.data),
+  deleteProduct: (id) =>
+    apiClient.delete(`/api/admin/products/${id}`).then(r => r.data),
 
-  updatePrice:     (id, price)=> axios.patch(`${BASE}/admin/products/${id}/price`, { price }).then(r => r.data),
-  updateStock:     (id, stock)=> axios.patch(`${BASE}/admin/products/${id}/stock`, { stock }).then(r => r.data),
-  toggleProduct:   (id)       => axios.patch(`${BASE}/admin/products/${id}/toggle`, {}).then(r => r.data),
-  deleteProduct:   (id)       => axios.delete(`${BASE}/admin/products/${id}`).then(r => r.data),
-  uploadProductImage: (id, formData) =>
-    axios.post(`${BASE}/admin/products/${id}/image`, formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
+  getOrders: () =>
+    apiClient.get('/api/admin/orders').then(r => r.data),
 
-  /* Orders */
-  getOrders:       ()         => axios.get(`${BASE}/admin/orders`).then(r => r.data),
-  getTodayOrders:  ()         => axios.get(`${BASE}/admin/orders/today`).then(r => r.data),
-  getOrder:        (id)       => axios.get(`${BASE}/admin/orders/${id}`).then(r => r.data),
-  updateStatus:    (id, status, notes) =>
-    axios.patch(`${BASE}/admin/orders/${id}/status`, { status, notes }).then(r => r.data),
+  updateStatus: (id, status, notes) =>
+    apiClient.patch(`/api/admin/orders/${id}/status`, { status, notes }).then(r => r.data),
 };
