@@ -1,13 +1,15 @@
 import axios from 'axios';
 
+// ✅ Backend base URL (include /api)
 export const API_BASE_URL = "https://bc-freshnfresh.onrender.com";
+const BASE = `${API_BASE_URL}/api`;
 
-// ✅ Create axios instance
+// ✅ Axios instance
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: BASE,
 });
 
-// ✅ Attach token to every request
+// ✅ Attach JWT token
 apiClient.interceptors.request.use(config => {
   const token = localStorage.getItem('fs_token');
   if (token) {
@@ -22,6 +24,7 @@ apiClient.interceptors.response.use(
   err => {
     if (err?.response?.status === 401) {
       const url = err?.config?.url || '';
+
       if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
         localStorage.removeItem('fs_token');
         localStorage.removeItem('fs_user');
@@ -43,54 +46,54 @@ export function getImageUrl(imageUrl) {
 
 export const api = {
 
-  // Auth
-  register: (data) => apiClient.post('/api/auth/register', data).then(r => r.data),
-  login:    (data) => apiClient.post('/api/auth/login', data).then(r => r.data),
-  getMe:    ()     => apiClient.get('/api/auth/me').then(r => r.data),
-  updateProfile: (data) => apiClient.put('/api/auth/profile', data).then(r => r.data),
+  // 🔐 Auth
+  register: (data) => apiClient.post('/auth/register', data).then(r => r.data),
+  login:    (data) => apiClient.post('/auth/login', data).then(r => r.data),
+  getMe:    ()     => apiClient.get('/auth/me').then(r => r.data),
+  updateProfile: (data) => apiClient.put('/auth/profile', data).then(r => r.data),
 
-  // Products
+  // 🌸 Products
   getProducts: (search) =>
-    apiClient.get('/api/products', { params: search ? { search } : {} }).then(r => r.data),
+    apiClient.get('/products', { params: search ? { search } : {} }).then(r => r.data),
 
   getProductsByCategory: (cat) =>
-    apiClient.get('/api/products', { params: { category: cat } }).then(r => r.data),
+    apiClient.get('/products', { params: { category: cat } }).then(r => r.data),
 
   getCategories: () =>
-    apiClient.get('/api/products/categories').then(r => r.data),
+    apiClient.get('/products/categories').then(r => r.data),
 
   getProduct: (id) =>
-    apiClient.get(`/api/products/${id}`).then(r => r.data),
+    apiClient.get(`/products/${id}`).then(r => r.data),
 
-  // Delivery
+  // 🚚 Delivery
   checkDelivery: (lat, lon, subtotal = 0) =>
-    apiClient.get('/api/delivery/check', { params: { lat, lon, subtotal } }).then(r => r.data),
+    apiClient.get('/delivery/check', { params: { lat, lon, subtotal } }).then(r => r.data),
 
   getShopLocation: () =>
-    apiClient.get('/api/delivery/shop-location').then(r => r.data),
+    apiClient.get('/delivery/shop-location').then(r => r.data),
 
   getZones: () =>
-    apiClient.get('/api/delivery/zones').then(r => r.data),
+    apiClient.get('/delivery/zones').then(r => r.data),
 
-  // Orders
+  // 📦 Orders
   placeOrder: (data) =>
-    apiClient.post('/api/orders', data).then(r => r.data),
+    apiClient.post('/orders', data).then(r => r.data),
 
   myOrders: () =>
-    apiClient.get('/api/orders/my').then(r => r.data),
+    apiClient.get('/orders/my').then(r => r.data),
 
   getOrder: (id) =>
-    apiClient.get(`/api/orders/${id}`).then(r => r.data),
+    apiClient.get(`/orders/${id}`).then(r => r.data),
 
   trackOrder: (no) =>
-    apiClient.get(`/api/orders/track/${no}`).then(r => r.data),
+    apiClient.get(`/orders/track/${no}`).then(r => r.data),
 
-  // Payment
+  // 💳 Payment
   createRazorpayOrder: (orderId) =>
-    apiClient.post('/api/payment/create-order', { orderId }).then(r => r.data),
+    apiClient.post('/payment/create-order', { orderId }).then(r => r.data),
 
   verifyPayment: (data) =>
-    apiClient.post('/api/payment/verify', data).then(r => r.data),
+    apiClient.post('/payment/verify', data).then(r => r.data),
 };
 
 /* ================= ADMIN API ================= */
@@ -98,27 +101,27 @@ export const api = {
 export const adminApi = {
 
   getDashboard: () =>
-    apiClient.get('/api/admin/dashboard').then(r => r.data),
+    apiClient.get('/admin/dashboard').then(r => r.data),
 
   getAllProducts: () =>
-    apiClient.get('/api/admin/products').then(r => r.data),
+    apiClient.get('/admin/products').then(r => r.data),
 
   addProductMultipart: (formData) =>
-    apiClient.post('/api/admin/products', formData, {
+    apiClient.post('/admin/products', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(r => r.data),
 
   updateProductMultipart: (id, formData) =>
-    apiClient.put(`/api/admin/products/${id}`, formData, {
+    apiClient.put(`/admin/products/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(r => r.data),
 
   deleteProduct: (id) =>
-    apiClient.delete(`/api/admin/products/${id}`).then(r => r.data),
+    apiClient.delete(`/admin/products/${id}`).then(r => r.data),
 
   getOrders: () =>
-    apiClient.get('/api/admin/orders').then(r => r.data),
+    apiClient.get('/admin/orders').then(r => r.data),
 
   updateStatus: (id, status, notes) =>
-    apiClient.patch(`/api/admin/orders/${id}/status`, { status, notes }).then(r => r.data),
+    apiClient.patch(`/admin/orders/${id}/status`, { status, notes }).then(r => r.data),
 };
