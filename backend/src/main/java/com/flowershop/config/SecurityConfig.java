@@ -95,9 +95,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
+        // ✅ Allow ALL Netlify preview + production domains
+        config.setAllowedOriginPatterns(List.of(
             "http://localhost:3000",
-            "https://bucolic-kitten-6d2114.netlify.app"
+            "https://*.netlify.app"
         ));
 
         config.setAllowedMethods(List.of(
@@ -106,7 +107,9 @@ public class SecurityConfig {
 
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true);
+
+        // ❗ IMPORTANT: must be false when using wildcard
+        config.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
