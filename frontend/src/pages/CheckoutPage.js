@@ -26,6 +26,8 @@ function normalizeDelivery(raw, subtotal) {
   return { ...raw, deliveryCharge, minOrder, meetsMinOrder };
 }
 
+const ONLINE_PAYMENTS_ENABLED = false;
+
 export default function CheckoutPage() {
   const { cart, subtotal, clearCart } = useCart();
   const { user, isLoggedIn }          = useAuth();
@@ -332,7 +334,7 @@ export default function CheckoutPage() {
                       <span>Pay cash when your order arrives</span>
                     </div>
                   </label>
-                  <label className={`pay-option ${paymentMethod==='ONLINE' ? 'selected':''}`}>
+                  <label className={`pay-option ${paymentMethod==='ONLINE' ? 'selected':''}`} style={{ display: ONLINE_PAYMENTS_ENABLED ? '' : 'none' }}>
                     <input type="radio" name="payment" value="ONLINE"
                       checked={paymentMethod==='ONLINE'} onChange={() => setPaymentMethod('ONLINE')} />
                     <div className="pay-icon">💳</div>
