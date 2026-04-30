@@ -97,12 +97,8 @@ public class OrderService {
 
         Order savedOrder = orderRepo.save(order);
 
-        // 5. Send confirmation email
-        notificationService.sendOrderConfirmationEmail(
-                user.getEmail(),
-                user.getName(),
-                savedOrder.getOrderNumber()
-        );
+        // 5. Send confirmation email to customer + alert to admin
+        notificationService.sendOrderConfirmationEmail(savedOrder);
 
         return savedOrder;
     }
@@ -136,12 +132,8 @@ public class OrderService {
 
         Order updated = orderRepo.save(order);
 
-        // Send delivery email
-        notificationService.sendDeliveryNotificationEmail(
-                order.getUser().getEmail(),
-                order.getUser().getName(),
-                order.getOrderNumber()
-        );
+        // Send delivery thank-you email to customer
+        notificationService.sendDeliveryNotificationEmail(updated);
 
         return updated;
     }
@@ -196,7 +188,16 @@ public class OrderService {
             order.setAdminNotes(notes);
         }
 
-        return orderRepo.save(order);
+        Order saved = orderRepo.save(order);
+
+        // Send appropriate email based on new status
+        if (status == Status.DELIVERED) {
+            notificationService.sendDeliveryNotificationEmail(saved);
+        } else if (status != Status.PENDING) {
+            notificationService.sendStatusUpdateEmail(saved);
+        }
+
+        return saved;
     }
 
     // ─────────────────────────────────────────────────────────────

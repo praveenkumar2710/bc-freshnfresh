@@ -3,33 +3,30 @@ package com.flowershop.controller;
 import com.flowershop.model.Order;
 import com.flowershop.model.Order.Status;
 import com.flowershop.model.Product;
+import com.flowershop.service.CloudinaryService;
 import com.flowershop.service.OrderService;
 import com.flowershop.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.*;
 import java.util.*;
 
 /**
  * Admin Controller — ROLE_ADMIN required
+ * Images are now stored on Cloudinary (permanent) instead of Render disk (wiped on restart).
  */
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
-    @Autowired private ProductService productService;
-    @Autowired private OrderService   orderService;
-
-    @Value("${app.upload.dir:uploads/products}")
-    private String uploadDir;
+    @Autowired private ProductService    productService;
+    @Autowired private OrderService      orderService;
+    @Autowired private CloudinaryService cloudinaryService;
 
     /* ════════════════════════════════════════════
        DASHBOARD
@@ -62,24 +59,19 @@ public class AdminController {
     }
 
     /**
-     * FIX: Now accepts multipart/form-data so image can be uploaded together with product data.
-     * Also still accepts application/json (no image) for backward compatibility.
-     *
-     * Frontend should send as FormData:
-     *   formData.append("name", ...)
-     *   formData.append("price", ...)
-     *   formData.append("file", imageFile)   <-- optional
+     * Add new product with optional image (multipart/form-data).
+     * Image is uploaded to Cloudinary — survives Render restarts forever.
      */
     @PostMapping(value = "/products", consumes = {"multipart/form-data"})
     public ResponseEntity<?> addProductWithImage(
-            @RequestParam("name") String name,
-            @RequestParam("price") BigDecimal price,
-            @RequestParam("stock") int stock,
-            @RequestParam(value = "unit", defaultValue = "piece") String unit,
-            @RequestParam(value = "category", defaultValue = "") String category,
-            @RequestParam(value = "description", defaultValue = "") String description,
-            @RequestParam(value = "available", defaultValue = "true") boolean available,
-            @RequestParam(value = "file", required = false) MultipartFile file) {
+            @RequestParam("name")                          String name,
+            @RequestParam("price")                         BigDecimal price,
+            @RequestParam("stock")                         int stock,
+            @RequestParam(value = "unit",        defaultValue = "piece") String unit,
+            @RequestParam(value = "category",    defaultValue = "")      String category,
+            @RequestParam(value = "description", defaultValue = "")      String description,
+            @RequestParam(value = "available",   defaultValue = "true")  boolean available,
+            @RequestParam(value = "file",        required = false)        MultipartFile file) {
         try {
             Product p = new Product();
             p.setName(name);
@@ -90,18 +82,13 @@ public class AdminController {
             p.setDescription(description);
             p.setAvailable(available);
 
-            // Save first to get an ID
+            // Save first to get the database ID
             Product saved = productService.save(p);
 
-            // If image provided, save it and update imageUrl
+            // Upload image to Cloudinary if provided
             if (file != null && !file.isEmpty()) {
-                String orig = file.getOriginalFilename() != null ? file.getOriginalFilename() : "img";
-                String ext  = orig.contains(".") ? orig.substring(orig.lastIndexOf('.')) : ".jpg";
-                String imgName = "product_" + saved.getId() + "_" + System.currentTimeMillis() + ext;
-                Path dir = Paths.get(uploadDir);
-                Files.createDirectories(dir);
-                Files.copy(file.getInputStream(), dir.resolve(imgName), StandardCopyOption.REPLACE_EXISTING);
-                saved.setImageUrl("/uploads/products/" + imgName);
+                String imageUrl = cloudinaryService.uploadProductImage(file, saved.getId());
+                saved.setImageUrl(imageUrl);
                 saved.setImageEmoji("");
                 saved = productService.save(saved);
             }
@@ -119,6 +106,7 @@ public class AdminController {
         catch (Exception e) { return ResponseEntity.badRequest().body(Map.of("error", e.getMessage())); }
     }
 
+    // JSON-only update (no image change)
     @PutMapping("/products/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody Product updated) {
         return productService.findById(id).map(p -> {
@@ -136,20 +124,19 @@ public class AdminController {
     }
 
     /**
-     * FIX: Edit Flower with image — now handles multipart/form-data PUT
-     * This is what the "Save Flower" button in the Edit modal calls.
+     * Edit product with image — uploads new image to Cloudinary if provided.
      */
     @PutMapping(value = "/products/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<?> updateProductWithImage(
             @PathVariable Long id,
-            @RequestParam("name") String name,
-            @RequestParam("price") BigDecimal price,
-            @RequestParam("stock") int stock,
-            @RequestParam(value = "unit", defaultValue = "piece") String unit,
-            @RequestParam(value = "category", defaultValue = "") String category,
-            @RequestParam(value = "description", defaultValue = "") String description,
-            @RequestParam(value = "available", defaultValue = "true") boolean available,
-            @RequestParam(value = "file", required = false) MultipartFile file) {
+            @RequestParam("name")                          String name,
+            @RequestParam("price")                         BigDecimal price,
+            @RequestParam("stock")                         int stock,
+            @RequestParam(value = "unit",        defaultValue = "piece") String unit,
+            @RequestParam(value = "category",    defaultValue = "")      String category,
+            @RequestParam(value = "description", defaultValue = "")      String description,
+            @RequestParam(value = "available",   defaultValue = "true")  boolean available,
+            @RequestParam(value = "file",        required = false)        MultipartFile file) {
         return productService.findById(id).map(p -> {
             try {
                 p.setName(name);
@@ -160,40 +147,36 @@ public class AdminController {
                 p.setDescription(description);
                 p.setAvailable(available);
 
+                // Upload new image to Cloudinary if a new file was provided
                 if (file != null && !file.isEmpty()) {
-                    String orig = file.getOriginalFilename() != null ? file.getOriginalFilename() : "img";
-                    String ext  = orig.contains(".") ? orig.substring(orig.lastIndexOf('.')) : ".jpg";
-                    String imgName = "product_" + id + "_" + System.currentTimeMillis() + ext;
-                    Path dir = Paths.get(uploadDir);
-                    Files.createDirectories(dir);
-                    Files.copy(file.getInputStream(), dir.resolve(imgName), StandardCopyOption.REPLACE_EXISTING);
-                    p.setImageUrl("/uploads/products/" + imgName);
+                    String imageUrl = cloudinaryService.uploadProductImage(file, id);
+                    p.setImageUrl(imageUrl);
                     p.setImageEmoji("");
                 }
 
                 return ResponseEntity.ok((Object) productService.save(p));
-            } catch (IOException e) {
-                return ResponseEntity.internalServerError().body((Object) Map.of("error", "Image upload failed: " + e.getMessage()));
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError()
+                        .body((Object) Map.of("error", "Image upload failed: " + e.getMessage()));
             }
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * Standalone image upload endpoint — uploads to Cloudinary.
+     */
     @PostMapping("/products/{id}/image")
     public ResponseEntity<?> uploadImage(@PathVariable Long id,
                                          @RequestParam("file") MultipartFile file) {
         return productService.findById(id).map(p -> {
             try {
-                String orig = file.getOriginalFilename() != null ? file.getOriginalFilename() : "img";
-                String ext  = orig.contains(".") ? orig.substring(orig.lastIndexOf('.')) : ".jpg";
-                String name = "product_" + id + "_" + System.currentTimeMillis() + ext;
-                Path dir    = Paths.get(uploadDir);
-                Files.createDirectories(dir);
-                Files.copy(file.getInputStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
-                p.setImageUrl("/uploads/products/" + name);
+                String imageUrl = cloudinaryService.uploadProductImage(file, id);
+                p.setImageUrl(imageUrl);
                 p.setImageEmoji("");
                 return ResponseEntity.ok((Object) productService.save(p));
-            } catch (IOException e) {
-                return ResponseEntity.internalServerError().body(Map.of("error", "Upload failed: " + e.getMessage()));
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError()
+                        .body(Map.of("error", "Upload failed: " + e.getMessage()));
             }
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -222,10 +205,16 @@ public class AdminController {
         catch (RuntimeException e) { return ResponseEntity.badRequest().body(Map.of("error", e.getMessage())); }
     }
 
+    /**
+     * Delete product — also removes image from Cloudinary.
+     */
     @DeleteMapping("/products/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
-        try { productService.delete(id); return ResponseEntity.ok(Map.of("message", "Product deleted")); }
-        catch (Exception e) { return ResponseEntity.badRequest().body(Map.of("error", e.getMessage())); }
+        try {
+            cloudinaryService.deleteProductImage(id); // remove from Cloudinary
+            productService.delete(id);
+            return ResponseEntity.ok(Map.of("message", "Product deleted"));
+        } catch (Exception e) { return ResponseEntity.badRequest().body(Map.of("error", e.getMessage())); }
     }
 
     /* ════════════════════════════════════════════
