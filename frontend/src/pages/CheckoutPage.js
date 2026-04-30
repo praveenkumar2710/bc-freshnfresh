@@ -17,11 +17,7 @@ function loadRazorpayScript() {
   });
 }
 
-/* ─── Normalize delivery response ───────────────────────────
-   Backend may return "charge" OR "deliveryCharge"
-   meetsMinOrder may or may not be included
-   minOrder=0 always means NO minimum (free zone)
-──────────────────────────────────────────────────────────── */
+
 function normalizeDelivery(raw, subtotal) {
   const deliveryCharge  = Number(raw.deliveryCharge ?? raw.charge ?? 0);
   const minOrder        = Number(raw.minOrder ?? 0);
