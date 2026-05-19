@@ -81,6 +81,9 @@ export const api = {
   myOrders: () =>
     apiClient.get('/orders/my').then(r => r.data),
 
+  cancelOrder: (id) =>
+    apiClient.patch(`/orders/${id}/cancel`, {}).then(r => r.data),
+
   getOrder: (id) =>
     apiClient.get(`/orders/${id}`).then(r => r.data),
 
