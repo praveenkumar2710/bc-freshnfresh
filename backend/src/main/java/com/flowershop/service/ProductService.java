@@ -36,6 +36,14 @@ public class ProductService {
         return repo.save(p);
     }
 
+    public void restoreStock(Long id, int qty) {
+        Product p = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found: " + id));
+        p.setStock(p.getStock() + qty);
+        if (p.getStock() > 0) p.setAvailable(true);
+        repo.save(p);
+    }
+
     public void reduceStock(Long id, int qty) {
         Product p = repo.findById(id).orElseThrow(() -> new RuntimeException("Product not found: " + id));
         int newStock = p.getStock() - qty;

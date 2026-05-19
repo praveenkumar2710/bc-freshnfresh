@@ -26,10 +26,11 @@ export default function Footer() {
             <img src={logoB64} alt="BC Fresh n Fresh" className="footer-logo-img" />
           </div>
           <p className="footer-desc">
-            Hyderabad's trusted online flower shop — hand-picked fresh blooms delivered same day within 12 km. Cash &amp; UPI accepted.
+            Hyderabad's trusted online flower shop — hand-picked fresh blooms delivered same day within 12 km.
           </p>
           <div className="footer-contact-list">
-            <span>📍 Hyderabad, Telangana</span>
+            <span>📍Bachupally , Hyderabad, Telangana</span>
+            <span> any queries call to 📞 +91 8688538680 </span>
             <a href="mailto:bcfreshnfresh@gmail.com">✉️ bcfreshnfresh@gmail.com</a>
           </div>
           <div className="footer-social">

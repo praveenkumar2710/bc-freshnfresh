@@ -21,13 +21,13 @@ import com.flowershop.repository.OrderRepository;
 @Service
 public class OrderService {
 
-    @Autowired private OrderRepository orderRepo;
-    @Autowired private ProductService productService;
-    @Autowired private DeliveryService deliveryService;
+    @Autowired private OrderRepository     orderRepo;
+    @Autowired private ProductService      productService;
+    @Autowired private DeliveryService     deliveryService;
     @Autowired private NotificationService notificationService;
 
     // ─────────────────────────────────────────────────────────────
-    // PLACE ORDER (MAIN BUSINESS LOGIC)
+    // PLACE ORDER
     // ─────────────────────────────────────────────────────────────
     @Transactional
     public Order placeOrder(User user, PlaceOrderRequest req) {
@@ -196,6 +196,44 @@ public class OrderService {
         } else if (status != Status.PENDING) {
             notificationService.sendStatusUpdateEmail(saved);
         }
+
+        return saved;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CANCEL ORDER (CUSTOMER)
+    // Only allowed if status is PENDING
+    // ─────────────────────────────────────────────────────────────
+    @Transactional
+    public Order cancelOrder(Long orderId, Long userId) {
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Only the owner can cancel
+        if (!order.getUser().getId().equals(userId)) {
+            throw new RuntimeException("You can only cancel your own orders");
+        }
+
+        // Only PENDING orders can be cancelled by customer
+        if (order.getStatus() != Status.PENDING) {
+            throw new RuntimeException(
+                "Sorry, order cannot be cancelled after it has been " +
+                order.getStatus().name().toLowerCase().replace("_", " ")
+            );
+        }
+
+        // Restore stock
+        for (var item : order.getItems()) {
+            productService.restoreStock(item.getProduct().getId(), item.getQuantity());
+        }
+
+        order.setStatus(Status.CANCELLED);
+        order.setAdminNotes("Cancelled by customer");
+        Order saved = orderRepo.save(order);
+
+        // Notify customer
+        notificationService.sendStatusUpdateEmail(saved);
 
         return saved;
     }

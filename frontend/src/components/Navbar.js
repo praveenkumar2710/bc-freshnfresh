@@ -25,7 +25,7 @@ export default function Navbar() {
   return (
     <>
       <div className="nb-announce">
-        🌸 Same-day delivery within 12 km &nbsp;·&nbsp; Free delivery for orders under 3 km &nbsp;·&nbsp; 💳 UPI &amp; Cash on Delivery accepted!
+        🌸 Same-day delivery within 12 km &nbsp;·&nbsp; Free delivery for orders under 3 km &nbsp;·&nbsp;  &amp; Cash on Delivery accepted!
       </div>
       <nav className={`navbar${scrolled ? ' scrolled' : ''}`}>
         <div className="nb-inner">

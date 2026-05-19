@@ -127,4 +127,14 @@ export const adminApi = {
 
   updateStatus: (id, status, notes) =>
     apiClient.patch(`/admin/orders/${id}/status`, { status, notes }).then(r => r.data),
+
+  // ── Product quick actions ──
+  updatePrice: (id, price) =>
+    apiClient.patch(`/admin/products/${id}/price`, { price }).then(r => r.data),
+
+  updateStock: (id, stock) =>
+    apiClient.patch(`/admin/products/${id}/stock`, { stock }).then(r => r.data),
+
+  toggleProduct: (id) =>
+    apiClient.patch(`/admin/products/${id}/toggle`).then(r => r.data),
 };

@@ -16,7 +16,7 @@ const CATEGORIES = [
 ];
 
 /* ── Product Image ── */
-function ProductImage({ product }) {
+function ProductImage({ product, className }) {
   const [imgErr, setImgErr] = useState(false);
   const src = getImageUrl(product.imageUrl);
 
@@ -25,7 +25,7 @@ function ProductImage({ product }) {
       <img
         src={src}
         alt={product.name}
-        className="pcard-img"
+        className={className || 'pcard-img'}
         onError={() => setImgErr(true)}
       />
     );
@@ -33,23 +33,113 @@ function ProductImage({ product }) {
   return <div className="pcard-emoji">{product.imageEmoji || '🌸'}</div>;
 }
 
+/* ── Product Detail Modal (popup) ── */
+function ProductModal({ product, onClose }) {
+  const { addToCart, cartItems } = useCart();
+  const { isAdmin } = useAuth();
+  const inCart = cartItems?.find(i => i.id === product.id);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+
+        {/* Close button */}
+        <button className="modal-close" onClick={onClose}>✕</button>
+
+        {/* Image */}
+        <div className="modal-img-wrap">
+          <ProductImage product={product} className="modal-img" />
+          {!product.available && (
+            <div className="pcard-sold-out">Sold Out</div>
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="modal-body">
+          <div className="pcard-category">{product.category || 'Flowers'}</div>
+          <h2 className="modal-name">{product.name}</h2>
+
+          <div className="modal-price">
+            ₹{product.price}
+            <span className="pcard-unit"> / {product.unit || 'piece'}</span>
+          </div>
+
+          {/* Description */}
+          {product.description && product.description.trim() !== '' && (
+            <div className="modal-desc">
+              <div className="modal-desc-label">About this product</div>
+              <p>{product.description}</p>
+            </div>
+          )}
+
+          {/* Action button */}
+          <div className="modal-actions">
+            {isAdmin ? (
+              <Link to="/admin/products" className="pcard-btn pcard-btn-manage" style={{ padding:'12px 24px', fontSize:14 }}>
+                Manage Product
+              </Link>
+            ) : product.available ? (
+              <button
+                className={`pcard-btn ${inCart ? 'pcard-btn-added' : 'pcard-btn-add'}`}
+                style={{ padding:'12px 24px', fontSize:15, width:'100%' }}
+                onClick={() => { addToCart(product, 1); onClose(); }}
+              >
+                {inCart ? `✓ Added (${inCart.quantity}) — Add More` : '🛒 Add to Cart'}
+              </button>
+            ) : (
+              <span className="pcard-btn pcard-btn-disabled" style={{ padding:'12px 24px', fontSize:14, width:'100%', textAlign:'center' }}>
+                Currently Unavailable
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Product Card ── */
-function ProductCard({ product }) {
+function ProductCard({ product, onOpenModal }) {
   const { addToCart, cartItems } = useCart();
   const { isAdmin } = useAuth();
   const inCart = cartItems?.find(i => i.id === product.id);
 
   return (
     <div className="pcard">
-      <div className="pcard-img-wrap">
+      {/* Clicking image opens popup */}
+      <div className="pcard-img-wrap" onClick={() => onOpenModal(product)} style={{ cursor:'pointer' }}>
         <ProductImage product={product} />
         {!product.available && (
           <div className="pcard-sold-out">Sold Out</div>
         )}
+        {/* View detail hint */}
+        <div className="pcard-view-hint">🔍 View</div>
       </div>
+
       <div className="pcard-body">
         <div className="pcard-category">{product.category || 'Flowers'}</div>
-        <h3 className="pcard-name">{product.name}</h3>
+
+        {/* Clicking name also opens popup */}
+        <h3
+          className="pcard-name"
+          onClick={() => onOpenModal(product)}
+          style={{ cursor:'pointer' }}
+        >
+          {product.name}
+        </h3>
+
+        {/* Description preview — 2 lines max */}
+        {product.description && product.description.trim() !== '' && (
+          <p className="pcard-desc">{product.description}</p>
+        )}
+
         <div className="pcard-footer">
           <span className="pcard-price">
             ₹{product.price}
@@ -75,10 +165,11 @@ function ProductCard({ product }) {
 
 /* ── Main Page ── */
 export default function HomePage() {
-  const [products, setProducts] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [category, setCategory] = useState('All');
-  const [search,   setSearch]   = useState('');
+  const [products,      setProducts]      = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [category,      setCategory]      = useState('All');
+  const [search,        setSearch]        = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const { cartCount } = useCart();
   const { isAdmin }   = useAuth();
@@ -99,6 +190,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = selectedProduct ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [selectedProduct]);
 
   const visible = products.filter(p => {
     const matchCat    = category === 'All' || p.category === category;
@@ -165,7 +262,13 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="hp-grid">
-            {visible.map(p => <ProductCard key={p.id} product={p} />)}
+            {visible.map(p => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                onOpenModal={setSelectedProduct}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -175,6 +278,14 @@ export default function HomePage() {
         <Link to="/cart" className="hp-float-cart">
           🛒 View Cart &nbsp;<strong>({cartCount})</strong>
         </Link>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
       )}
 
     </div>

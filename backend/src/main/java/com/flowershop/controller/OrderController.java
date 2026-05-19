@@ -89,6 +89,29 @@ public class OrderController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+
+    /* ── CANCEL ORDER (CUSTOMER) ─────────────────────── */
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Object principal) {
+
+        if (!(principal instanceof User user))
+            return ResponseEntity.status(401).body(Map.of("error", "Please login"));
+
+        try {
+            Order order = orderService.cancelOrder(id, user.getId());
+            return ResponseEntity.ok(Map.of(
+                "success",     true,
+                "orderNumber", order.getOrderNumber(),
+                "status",      order.getStatus(),
+                "message",     "Order cancelled successfully"
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /* ── helpers ─────────────────────────────────────── */
     private Map<String, Object> toSummary(Order o) {
         Map<String, Object> m = new LinkedHashMap<>();
