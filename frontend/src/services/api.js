@@ -24,11 +24,12 @@ apiClient.interceptors.response.use(
   err => {
     if (err?.response?.status === 401) {
       const url = err?.config?.url || '';
-      if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
-        localStorage.removeItem('fs_token');
-        localStorage.removeItem('fs_user');
-        window.location.href = '/login';
-      }
+     const token = localStorage.getItem('fs_token');
+if (token && !url.includes('/auth/login') && !url.includes('/auth/register')) {
+  localStorage.removeItem('fs_token');
+  localStorage.removeItem('fs_user');
+  window.location.href = '/login';
+}
     }
     return Promise.reject(err);
   }
@@ -64,34 +65,6 @@ export const api = {
   getProduct: (id) =>
     apiClient.get(`/products/${id}`).then(r => r.data),
 
-
-    getProductReviews: (productId) =>
-    apiClient.get(`/reviews/product/${productId}`).then(r => r.data),
- 
-  addReview: (productId, rating, comment) =>
-    apiClient.post(`/reviews/product/${productId}`, { rating, comment }).then(r => r.data),
- 
-  deleteReview: (reviewId) =>
-    apiClient.delete(`/reviews/${reviewId}`).then(r => r.data),
- 
-  getMyReview: (productId) =>
-    apiClient.get(`/reviews/product/${productId}/my`).then(r => r.data),
- 
-  // ── App Rating ──
-  getAppRating: () =>
-    apiClient.get('/ratings').then(r => r.data),
- 
-  getMyAppRating: () =>
-    apiClient.get('/ratings/my').then(r => r.data),
- 
-  submitAppRating: (rating, comment) =>
-    apiClient.post('/ratings', { rating, comment }).then(r => r.data),
-   getOrder: (id) =>
-    apiClient.get(`/orders/${id}`).then(r => r.data),
- 
-  trackOrder: (no) =>
-    apiClient.get(`/orders/track/${no}`).then(r => r.data),
-
   // 🚚 Delivery
   checkDelivery: (lat, lon, subtotal = 0) =>
     apiClient.get('/delivery/check', { params: { lat, lon, subtotal } }).then(r => r.data),
@@ -111,6 +84,29 @@ export const api = {
 
   cancelOrder: (id) =>
     apiClient.patch(`/orders/${id}/cancel`, {}).then(r => r.data),
+
+  // ── Reviews ──
+  getProductReviews: (productId) =>
+    apiClient.get(`/reviews/product/${productId}`).then(r => r.data),
+
+  addReview: (productId, rating, comment) =>
+    apiClient.post(`/reviews/product/${productId}`, { rating, comment }).then(r => r.data),
+
+  deleteReview: (reviewId) =>
+    apiClient.delete(`/reviews/${reviewId}`).then(r => r.data),
+
+  getMyReview: (productId) =>
+    apiClient.get(`/reviews/product/${productId}/my`).then(r => r.data),
+
+  // ── App Rating ──
+  getAppRating: () =>
+    apiClient.get('/ratings').then(r => r.data),
+
+  getMyAppRating: () =>
+    apiClient.get('/ratings/my').then(r => r.data),
+
+  submitAppRating: (rating, comment) =>
+    apiClient.post('/ratings', { rating, comment }).then(r => r.data),
 
   getOrder: (id) =>
     apiClient.get(`/orders/${id}`).then(r => r.data),
