@@ -86,6 +86,11 @@ export const api = {
  
   submitAppRating: (rating, comment) =>
     apiClient.post('/ratings', { rating, comment }).then(r => r.data),
+   getOrder: (id) =>
+    apiClient.get(`/orders/${id}`).then(r => r.data),
+ 
+  trackOrder: (no) =>
+    apiClient.get(`/orders/track/${no}`).then(r => r.data),
 
   // 🚚 Delivery
   checkDelivery: (lat, lon, subtotal = 0) =>
