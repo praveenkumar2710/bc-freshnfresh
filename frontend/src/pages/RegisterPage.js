@@ -4,11 +4,12 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
-  const { login, isLoggedIn } = useAuth();
+  const { isLoggedIn }        = useAuth();
   const navigate              = useNavigate();
   const [form, setForm]       = useState({ name:'', email:'', password:'', phone:'', address:'' });
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   // Already logged in → redirect away
   if (isLoggedIn) { navigate('/'); return null; }
@@ -19,20 +20,20 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(''); setLoading(true);
 
-    // Client-side duplicate check hint
     if (!form.email.trim() || !form.password.trim()) {
       setError('Email and password are required.');
       setLoading(false); return;
     }
 
     try {
-      const res = await api.register(form);
-      login({ id: res.id, name: res.name, email: res.email, role: res.role }, res.token);
-      navigate('/');
+      await api.register(form);
+
+      // ✅ Show success message — user must login manually
+      setSuccess(true);
+
     } catch (err) {
       const msg = err.response?.data?.error || 'Registration failed. Please try again.';
 
-      // Backend returns "Email already registered. Please login." — show it clearly
       if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered')) {
         setError(
           <span>
@@ -49,6 +50,32 @@ export default function RegisterPage() {
     setLoading(false);
   };
 
+  // ── Success Screen ────────────────────────────────────────
+  if (success) {
+    return (
+      <div className="page-wrapper" style={{ maxWidth:460, margin:'40px auto' }}>
+        <div className="card" style={{ padding:40, textAlign:'center' }}>
+          <div style={{ fontSize:56, marginBottom:12 }}>🎉</div>
+          <h2 style={{ color:'#1a8c4e', margin:'0 0 8px' }}>Account Created!</h2>
+          <p style={{ color:'var(--text-mid)', fontSize:14, margin:'0 0 8px' }}>
+            Welcome to <strong>BC Fresh n Fresh</strong>!
+          </p>
+          <p style={{ color:'var(--text-light)', fontSize:13, margin:'0 0 28px' }}>
+            Your account has been created successfully.<br />
+            Please login to start ordering fresh flowers.
+          </p>
+          <Link to="/login" className="btn btn-primary btn-lg btn-full">
+            🔑 Login Now →
+          </Link>
+          <p style={{ color:'var(--text-light)', fontSize:12, marginTop:14 }}>
+            Registered as: <strong>{form.email}</strong>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Register Form ─────────────────────────────────────────
   return (
     <div className="page-wrapper" style={{ maxWidth:460, margin:'40px auto' }}>
       <div className="card" style={{ padding:32 }}>
@@ -70,11 +97,12 @@ export default function RegisterPage() {
           <div className="form-group">
             <label>Email *</label>
             <input name="email" type="email" value={form.email} onChange={ch}
-              placeholder="your@email.com" required
-              style={{ borderColor: error && String(error).includes?.('already') ? '#e63946' : '' }} />
+              placeholder="your@email.com" required />
           </div>
           <div className="form-group">
-            <label>Password * <small style={{ color:'var(--text-light)', fontWeight:400 }}>(min 6 characters)</small></label>
+            <label>Password *
+              <small style={{ color:'var(--text-light)', fontWeight:400 }}> (min 6 characters)</small>
+            </label>
             <input name="password" type="password" value={form.password} onChange={ch}
               placeholder="Create a password" required minLength={6} />
           </div>
@@ -84,7 +112,9 @@ export default function RegisterPage() {
               placeholder="10-digit mobile" maxLength={10} inputMode="numeric" />
           </div>
           <div className="form-group">
-            <label>Address <small style={{ color:'var(--text-light)', fontWeight:400 }}>(optional, saves time at checkout)</small></label>
+            <label>Address
+              <small style={{ color:'var(--text-light)', fontWeight:400 }}> (optional)</small>
+            </label>
             <textarea name="address" value={form.address} onChange={ch}
               placeholder="House no, street, area…" rows={2} style={{ resize:'vertical' }} />
           </div>

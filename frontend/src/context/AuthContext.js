@@ -16,7 +16,6 @@ function getRoleFromToken(token) {
   } catch { return null; }
 }
 
-/** Wipe every piece of user/cart/session data from localStorage */
 function clearAllStorage() {
   localStorage.removeItem('fs_token');
   localStorage.removeItem('fs_user');
@@ -25,8 +24,9 @@ function clearAllStorage() {
 }
 
 export function AuthProvider({ children }) {
-  const [user,  setUser]  = useState(null);
-  const [token, setToken] = useState(null);
+  const [user,    setUser]    = useState(null);
+  const [token,   setToken]   = useState(null);
+  const [loading, setLoading] = useState(true); // ← NEW: wait until session restored
 
   // Restore session from localStorage on first load
   useEffect(() => {
@@ -34,7 +34,6 @@ export function AuthProvider({ children }) {
     const u = localStorage.getItem('fs_user');
     if (t && u) {
       if (isTokenExpired(t)) {
-        // Token expired — clear everything including cart
         clearAllStorage();
       } else {
         setToken(t);
@@ -51,6 +50,7 @@ export function AuthProvider({ children }) {
         }
       }
     }
+    setLoading(false); // ← done restoring session
   }, []);
 
   const login = (userData, jwt) => {
@@ -60,7 +60,6 @@ export function AuthProvider({ children }) {
     setToken(jwt);
     localStorage.setItem('fs_token', jwt);
     localStorage.setItem('fs_user',  JSON.stringify(enrichedUser));
-    // Clear any leftover cart from a previous session / different user
     localStorage.removeItem('fs_cart');
     localStorage.removeItem('fs_cart_ts');
   };
@@ -68,12 +67,26 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
-    // Wipe EVERYTHING on logout — cart, token, user
     clearAllStorage();
   };
 
   const isAdmin    = user?.role === 'ADMIN';
   const isLoggedIn = !!token && !isTokenExpired(token);
+
+  // ← Don't render anything until session is restored
+  if (loading) {
+    return (
+      <div style={{
+        display:'flex', alignItems:'center', justifyContent:'center',
+        height:'100vh', flexDirection:'column', gap:12
+      }}>
+        <div style={{ fontSize:40 }}>🌸</div>
+        <p style={{ color:'#1a8c4e', fontWeight:600, fontSize:16 }}>
+          BC Fresh n Fresh
+        </p>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isAdmin, isLoggedIn }}>

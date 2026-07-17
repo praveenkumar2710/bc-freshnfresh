@@ -18,7 +18,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts  from './pages/admin/AdminProducts';
 import AdminOrders    from './pages/admin/AdminOrders';
 import RatingWidget from './components/RatingWidget';
-
+import WhatsAppButton from './components/WhatsAppButton';
 // Admin-only route guard
 function AdminRoute({ children }) {
   const { isLoggedIn, isAdmin } = useAuth();
@@ -77,6 +77,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          <WhatsAppButton />
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>
