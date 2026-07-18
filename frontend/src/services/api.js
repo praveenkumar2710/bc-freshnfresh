@@ -147,7 +147,8 @@ export const adminApi = {
 
   getOrders: () =>
     apiClient.get('/admin/orders').then(r => r.data),
-
+getTodayOrders: () =>
+  apiClient.get('/admin/orders/today').then(r => r.data),
   // ✅ FIXED: was missing, caused "getOrder is not a function" on Netlify
   getOrder: (id) =>
     apiClient.get(`/admin/orders/${id}`).then(r => r.data),
