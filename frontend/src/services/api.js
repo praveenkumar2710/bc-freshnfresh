@@ -1,12 +1,12 @@
 import axios from 'axios';
 
 // ✅ Backend base URL (include /api)
-export const API_BASE_URL = "https://bc-freshnfresh.onrender.com";
-const BASE = `${API_BASE_URL}/api`;
+export const API_BASE_URL =
+"https://bcfreshnfresh-api-hjd4ebgffrgpgbau.centralindia-01.azurewebsites.net";
 
 // ✅ Axios instance
 const apiClient = axios.create({
-  baseURL: BASE,
+  baseURL: API_BASE_URL,
 });
 
 // ✅ Attach JWT token
