@@ -6,7 +6,7 @@ export const API_BASE_URL =
 
 // ✅ Axios instance
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
 });
 
 // ✅ Attach JWT token
