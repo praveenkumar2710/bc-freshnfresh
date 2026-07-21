@@ -26,17 +26,48 @@ export default function Footer() {
             <img src={logoB64} alt="BC Fresh n Fresh" className="footer-logo-img" />
           </div>
           <p className="footer-desc">
-            Hyderabad's trusted online flower shop — hand-picked fresh blooms delivered same day within 12 km.
+            Hyderabad's trusted online flower shop — hand-picked fresh blooms delivered same day within 12 km. Cash &amp; UPI accepted.
           </p>
           <div className="footer-contact-list">
-            <span>📍Bachupally , Hyderabad, Telangana</span>
-            <span> any queries call to 📞 +91 8688538680 </span>
+            <span>📍 Hyderabad, Telangana</span>
             <a href="mailto:bcfreshnfresh@gmail.com">✉️ bcfreshnfresh@gmail.com</a>
           </div>
           <div className="footer-social">
-            <a href="#!" aria-label="Facebook" className="social-btn">f</a>
-            <a href="#!" aria-label="Instagram" className="social-btn">📷</a>
-            <a href="#!" aria-label="WhatsApp" className="social-btn">💬</a>
+            
+            <a href="https://wa.me/918688538680" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="social-btn">💬</a>
+          </div>
+
+          {/* Decoration Services Card */}
+          <div style={{
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: 10,
+            padding: '12px 16px',
+            marginTop: 16
+          }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1a8c4e', margin: '0 0 4px' }}>
+              🎊 Flower Decorations Available!
+            </p>
+            <p style={{ fontSize: 12, color: '#555', margin: '0 0 8px' }}>
+              Weddings, Pooja, Events & more — contact us!
+            </p>
+            <a
+              href="https://wa.me/918688538680?text=Hello%20BC%20Fresh%20n%20Fresh!%20I%20am%20interested%20in%20flower%20decoration%20services."
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: '#25D366',
+                color: '#fff',
+                padding: '6px 16px',
+                borderRadius: 20,
+                textDecoration: 'none',
+                fontSize: 12,
+                fontWeight: 600,
+                display: 'inline-block'
+              }}
+            >
+              💬 WhatsApp Us
+            </a>
           </div>
         </div>
 

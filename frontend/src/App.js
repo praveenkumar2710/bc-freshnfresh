@@ -17,6 +17,8 @@ import RegisterPage     from './pages/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts  from './pages/admin/AdminProducts';
 import AdminOrders    from './pages/admin/AdminOrders';
+import WhatsAppButton from './components/WhatsAppButton';
+import RatingWidget   from './components/RatingWidget';
 
 // Admin-only route guard
 function AdminRoute({ children }) {
@@ -46,6 +48,8 @@ function CustomerLayout({ children }) {
       <Navbar />
       <main style={{ flex:1 }}>{children}</main>
       <Footer />
+      <WhatsAppButton />
+      <RatingWidget />
     </div>
   );
 }
@@ -75,6 +79,8 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          <WhatsAppButton />
+          <RatingWidget />
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>

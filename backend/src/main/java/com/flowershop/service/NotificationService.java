@@ -58,25 +58,6 @@ public class NotificationService {
         );
     }
 
-    // ─── 3. Status update email ───────────────────────────────────────────────
-    @Async
-    public void sendStatusUpdateEmail(Order order) {
-        String statusLabel = switch (order.getStatus()) {
-            case CONFIRMED       -> "✅ Confirmed";
-            case PREPARING       -> "👨 Being Prepared";
-            case OUT_FOR_DELIVERY -> "🚚 Out for Delivery";
-            case DELIVERED       -> "📦 Delivered";
-            case CANCELLED       -> "❌ Cancelled";
-            default              -> order.getStatus().name();
-        };
-        System.out.println("📧 Sending status update to: " + order.getUser().getEmail());
-        sendHtmlEmail(
-            order.getUser().getEmail(),
-            "📦 Order Update: " + statusLabel + " - " + order.getOrderNumber(),
-            buildStatusUpdateHtml(order, statusLabel)
-        );
-    }
-
     // ─── Generic HTML Email Sender ────────────────────────────────────────────
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         try {
@@ -185,24 +166,6 @@ public class NotificationService {
             + "</div>"
             + "<div style='background:#f4f9f4;padding:14px;text-align:center;'>"
             + "<p style='color:#aaa;font-size:12px;margin:0;'>" + appName + " - Same-day delivery within 12 km - Hyderabad</p>"
-            + "</div>"
-            + "</div></body></html>";
-    }
-
-    // ─── HTML: Status Update ──────────────────────────────────────────────────
-    private String buildStatusUpdateHtml(Order order, String statusLabel) {
-        return "<html><body style='font-family:sans-serif;background:#f4f4f4;padding:20px;'>"
-            + "<div style='max-width:520px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;'>"
-            + "<div style='background:#1a8c4e;padding:24px;text-align:center;'>"
-            + "<h1 style='color:#fff;margin:0;font-size:20px;'>Order " + statusLabel + "</h1>"
-            + "</div>"
-            + "<div style='padding:24px;'>"
-            + "<p style='font-size:16px;'>Hi <strong>" + order.getUser().getName() + "</strong>,</p>"
-            + "<p>Your order <strong>#" + order.getOrderNumber() + "</strong> status has been updated to <strong>" + statusLabel + "</strong>.</p>"
-            + (order.getAdminNotes() != null && !order.getAdminNotes().isBlank()
-                ? "<div style='background:#f8f8f8;border-radius:8px;padding:12px;margin-top:16px;'>"
-                + "<p style='color:#555;font-size:13px;margin:0;'><strong>Note:</strong> " + order.getAdminNotes() + "</p></div>" : "")
-            + "<p style='color:#aaa;font-size:12px;margin-top:24px;'>" + appName + " - Hyderabad</p>"
             + "</div>"
             + "</div></body></html>";
     }

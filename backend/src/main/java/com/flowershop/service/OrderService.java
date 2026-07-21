@@ -190,11 +190,10 @@ public class OrderService {
 
         Order saved = orderRepo.save(order);
 
-        // Send appropriate email based on new status
+        // Only email the customer when the order is delivered.
+        // No emails for CONFIRMED / PREPARING / OUT_FOR_DELIVERY, etc.
         if (status == Status.DELIVERED) {
             notificationService.sendDeliveryNotificationEmail(saved);
-        } else if (status != Status.PENDING) {
-            notificationService.sendStatusUpdateEmail(saved);
         }
 
         return saved;
@@ -230,12 +229,9 @@ public class OrderService {
 
         order.setStatus(Status.CANCELLED);
         order.setAdminNotes("Cancelled by customer");
-        Order saved = orderRepo.save(order);
 
-        // Notify customer
-        notificationService.sendStatusUpdateEmail(saved);
-
-        return saved;
+        // No email sent on cancellation
+        return orderRepo.save(order);
     }
 
     // ─────────────────────────────────────────────────────────────

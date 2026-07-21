@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const PHONE    = '918688538680'; // your number with country code
 const MESSAGE  = encodeURIComponent(
-  'Hello BC Fresh n Fresh! 🌸\nI would like to place an order / have a query.'
+  'customized order or  enquiry about decorations and functions or any quesries products and services'
 );
 const WA_URL   = `https://wa.me/${PHONE}?text=${MESSAGE}`;
 
